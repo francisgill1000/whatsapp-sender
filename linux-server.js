@@ -68,6 +68,8 @@ app.get("/qr", (req, res) => {
   });
 
   client.initialize();
+
+  res.send("done");
 });
 
 // Define the API endpoint
