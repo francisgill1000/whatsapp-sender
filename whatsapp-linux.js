@@ -8,6 +8,7 @@ const initializeWhatsAppClient = async (phone, message) => {
   whatsappClient = new Client({
     authStrategy: new LocalAuth(),
     puppeteer: {
+      args: ['--no-sandbox', '--disable-setuid-sandbox'], // Add this line to disable the sandbox
       executablePath: "/snap/bin/chromium", // Replace with the actual path
     },
   });
