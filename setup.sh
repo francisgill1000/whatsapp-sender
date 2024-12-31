@@ -38,7 +38,7 @@ cd whatsapp-sender
 
 # Optional: Run any setup command for your repository (if needed)
 # Example: npm install
-# echo "Installing dependencies for the WhatsApp Sender project..."
-# npm install
+echo "Installing dependencies for the WhatsApp Sender project..."
+npm install
 
 echo "Setup complete!"
