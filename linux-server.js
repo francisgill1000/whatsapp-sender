@@ -55,9 +55,16 @@ app.get("/qr", (req, res) => {
   client.on("authenticated", () => {
     const apiInfo = {
       response: "Authenticated successfully!",
+      endpoint: "http://167.172.148.248:3000/send-message",
+      exampleRequest: `
+    {
+      "phone": "1234567890",
+      "message": "Hello, this is a test message!"
+    }
+    `,
     };
 
-    res.send(apiInfo);
+    res.json(apiInfo);
   });
 
   client.on("auth_failure", (message) => {
