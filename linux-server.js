@@ -1,6 +1,7 @@
 const express = require("express");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const cors = require("cors");
+const path = require('path');
 
 const app = express();
 
