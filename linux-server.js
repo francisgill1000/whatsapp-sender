@@ -16,6 +16,11 @@ app.get("/test", (req, res) => {
   res.send("working......");
 });
 
+// Serve client.html
+app.get("/client.html", (req, res) => {
+  res.sendFile(path.join(__dirname, "client.html"));
+});
+
 // API to initialize the WhatsApp client and return the QR code
 app.get("/api/init", async (req, res) => {
   try {
