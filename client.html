@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Web API Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      text-align: center;
+    }
+    button {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    img {
+      display: block;
+      max-width: 100%;
+      margin: 10px 0;
+    }
+    label {
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    textarea {
+      resize: vertical;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>WhatsApp Web API</h1>
+    <button id="initBtn">Initialize WhatsApp Client</button>
+    <div id="qrContainer" style="display: none;">
+      <h3>Scan the QR Code:</h3>
+      <img id="qrCode" src="" alt="QR Code">
+    </div>
+
+    <h3>Send Message</h3>
+    <label for="phone">Phone Number (with country code):</label>
+    <input type="text" id="phone" placeholder="e.g., 1234567890">
+    <label for="message">Message:</label>
+    <textarea id="message" placeholder="Type your message here..."></textarea>
+    <button id="sendBtn">Send Message</button>
+    <p id="status"></p>
+  </div>
+
+  <script>
+    const initBtn = document.getElementById("initBtn");
+    const qrContainer = document.getElementById("qrContainer");
+    const qrCode = document.getElementById("qrCode");
+    const sendBtn = document.getElementById("sendBtn");
+    const status = document.getElementById("status");
+
+    // Initialize WhatsApp client and get QR code
+    initBtn.addEventListener("click", async () => {
+      qrContainer.style.display = "none";
+      try {
+        const response = await fetch("http://167.172.148.248:3000/api/init");
+        const data = await response.json();
+        if (data.success) {
+          qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
+          qrContainer.style.display = "block";
+        } else {
+          alert("Failed to initialize WhatsApp client: " + data.error);
+        }
+      } catch (error) {
+        console.error("Error initializing WhatsApp client:", error);
+        alert("Error initializing WhatsApp client.");
+      }
+    });
+
+    // Send a message
+    sendBtn.addEventListener("click", async () => {
+      const phone = document.getElementById("phone").value;
+      const message = document.getElementById("message").value;
+
+      if (!phone || !message) {
+        alert("Please enter both phone number and message.");
+        return;
+      }
+
+      try {
+        const response = await fetch("http://167.172.148.248:3000/api/send-message", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ phone, message }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          status.textContent = "Message sent successfully!";
+          status.style.color = "green";
+        } else {
+          status.textContent = "Failed to send message: " + data.message;
+          status.style.color = "red";
+        }
+      } catch (error) {
+        console.error("Error sending message:", error);
+        status.textContent = "Error sending message.";
+        status.style.color = "red";
+      }
+    });
+  </script>
+</body>
+</html>
