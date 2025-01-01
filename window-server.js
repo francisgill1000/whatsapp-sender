@@ -29,10 +29,6 @@ app.get("/api/init", async (req, res) => {
       authStrategy: new LocalAuth({
         clientId: "whatsapp-client", // Ensure unique client ID
       }),
-      puppeteer: {
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        executablePath: "/snap/bin/chromium", // Replace with your Chromium path
-      },
     });
 
     // Use a promise to wait for the QR code event
