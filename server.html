@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Web Server</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>WhatsApp Web Server</h1>
+      <div class="loading" id="loadingIndicator">
+        <div class="spinner"></div>
+        <p>Waiting for connection...</p>
+      </div>
+      <div id="qrContainer" style="display: none">
+        <h3>Scan the QR Code:</h3>
+        <img style="padding: 20px" id="qrCode" src="" alt="QR Code" />
+      </div>
+      <div id="statusMessage">
+        <div id="statusIcon" class="red"></div>
+        <span id="statusText"></span>
+      </div>
+      <div id="apiExample">
+        <h3>API Usage Example</h3>
+        <p>
+          <strong>Endpoint:</strong>
+          <code>http://167.172.148.248:3001/api/send-message</code>
+        </p>
+        <p><strong>Request:</strong></p>
+        <pre>
+{
+  "phone": "971xxxxxxxxx",
+  "message": "test message"
+}
+      </pre
+        >
+        <p><strong>Response:</strong></p>
+        <pre>
+{
+  "success": true,
+  "message": "Message sent successfully!"
+}
+      </pre
+        >
+      </div>
+      <div id="reloadContainer" style="display: none">
+        <button id="reloadButton">Reload Page</button>
+      </div>
+    </div>
+
+    <script>
+      const ws = new WebSocket("ws://167.172.148.248:3000");
+
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      const qrContainer = document.getElementById("qrContainer");
+      const statusText = document.getElementById("statusText");
+      const statusIcon = document.getElementById("statusIcon");
+      const apiExample = document.getElementById("apiExample");
+      const reloadContainer = document.getElementById("reloadContainer");
+      const reloadButton = document.getElementById("reloadButton");
+
+      ws.onopen = () => {
+        loadingIndicator.style.display = "block";
+      };
+
+      ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        if (data.type === "qr") {
+          const qrCode = document.getElementById("qrCode");
+          qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+            data.qr
+          )}`;
+          qrContainer.style.display = "block";
+          statusText.textContent = "Scan the QR code to connect.";
+          statusIcon.className = "red";
+          apiExample.style.display = "none";
+          loadingIndicator.style.display = "none";
+          reloadContainer.style.display = "none";
+          console.log("🚀 ~ QR Code:", data.qr);
+        } else if (data.type === "status" && data.ready) {
+          statusText.textContent = "WhatsApp client is ready.";
+          statusIcon.className = "green";
+          qrContainer.style.display = "none";
+          apiExample.style.display = "block";
+          loadingIndicator.style.display = "none";
+          reloadContainer.style.display = "none";
+          console.log("WhatsApp client is ready.");
+        } else if (data.type === "error") {
+          statusText.textContent = `Error: ${data.message}`;
+          statusIcon.className = "red";
+          qrContainer.style.display = "none";
+          apiExample.style.display = "none";
+          loadingIndicator.style.display = "none";
+          reloadContainer.style.display = "block";
+          console.error("Error received:", data.message);
+        }
+      };
+
+      ws.onclose = () => {
+        statusText.textContent = "Connection lost. Please refresh the page.";
+        statusIcon.className = "red";
+        apiExample.style.display = "none";
+        loadingIndicator.style.display = "none";
+        reloadContainer.style.display = "block";
+      };
+
+      reloadButton.addEventListener("click", () => {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

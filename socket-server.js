@@ -33,7 +33,7 @@ wss.on("connection", async (ws) => {
 });
 
 server.listen(3000, () => {
-  console.log("WebSocket server running on ws://localhost:3000");
+  console.log("WebSocket server running on ws://167.172.148.248:3000");
 });
 
 async function init(ws) {
@@ -135,8 +135,13 @@ app.post("/api/send-message", async (req, res) => {
   }
 });
 
+// Serve client.html
+app.get("/server", (req, res) => {
+  res.sendFile(path.join(__dirname, "server.html"));
+});
+
 // Start the server
 const port = 3001;
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server running at http://167.172.148.248:${port}`);
 });
