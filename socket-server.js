@@ -12,40 +12,53 @@ const wss = new WebSocketServer({ server });
 const app = express();
 
 app.use(express.json());
-
 app.use(cors());
 
-let whatsappClient = null;
-let isClientReady = null;
+let clients = {}; // Store clients by client id
 
 wss.on("connection", async (ws) => {
-  await init(ws);
+  const clientId = generateClientId(); // Generate a unique client ID for each connection
+  await init(ws, clientId);
 
   console.log("Client connected");
 
   ws.on("close", () => {
     console.log("Client disconnected.");
-    whatsappClient.destroy();
+    if (clients[clientId]) {
+      clients[clientId].whatsappClient.destroy();
+      delete clients[clientId];
+    }
   });
 
-  ws.send(JSON.stringify({ message: "Hello from server" }));
+  ws.send(JSON.stringify({ message: "Hello from server", clientId }));
 });
+
+// Send QR code and other data for a specific client
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  if (data.type === "qr") {
+    const qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+      data.qr
+    )}`;
+    ws.send(JSON.stringify({ type: "qr", clientId, qr: qrCode }));
+  }
+};
 
 server.listen(3000, () => {
   console.log("WebSocket server running on ws://167.172.148.248:3000");
 });
 
-async function init(ws) {
+async function init(ws, clientId) {
   try {
     // Disconnect the existing client if already initialized
-    if (whatsappClient) {
+    if (clients[clientId]) {
       console.log("Disconnecting existing client...");
-      await whatsappClient.destroy();
+      await clients[clientId].whatsappClient.destroy();
     }
 
-    whatsappClient = new Client({
+    const whatsappClient = new Client({
       authStrategy: new LocalAuth({
-        clientId: "whatsapp-client", // Ensure unique client ID
+        clientId: clientId, // Use unique client ID
       }),
       puppeteer: {
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -72,7 +85,7 @@ async function init(ws) {
 
     whatsappClient.on("ready", () => {
       console.log("Client is ready");
-      isClientReady = true;
+      clients[clientId].isClientReady = true;
       ws.send(JSON.stringify({ type: "status", ready: true })); // Notify client that WhatsApp is ready
     });
 
@@ -88,7 +101,7 @@ async function init(ws) {
 
     whatsappClient.on("disconnected", (reason) => {
       console.log("Disconnected:", reason);
-      isClientReady = false;
+      clients[clientId].isClientReady = false;
       ws.send(
         JSON.stringify({
           type: "error",
@@ -96,6 +109,9 @@ async function init(ws) {
         })
       ); // Notify client about disconnection
     });
+
+    // Save client state
+    clients[clientId] = { whatsappClient, isClientReady: false };
 
     // Initialize the client
     whatsappClient.initialize();
@@ -110,11 +126,16 @@ async function init(ws) {
   }
 }
 
-// API to send a message
-app.post("/api/send-message", async (req, res) => {
-  const { phone, message } = req.body;
+// Generate a unique client ID for each connection
+function generateClientId() {
+  return `client_${Math.random().toString(36).substr(2, 9)}`;
+}
 
-  if (!isClientReady) {
+// API to send a message for a specific client
+app.post("/api/send-message", async (req, res) => {
+  const { clientId, phone, message } = req.body;
+
+  if (!clients[clientId] || !clients[clientId].isClientReady) {
     return res
       .status(400)
       .json({ success: false, message: "WhatsApp client is not ready." });
@@ -122,7 +143,7 @@ app.post("/api/send-message", async (req, res) => {
 
   try {
     const formattedPhone = `${phone}@c.us`; // Format phone number
-    await whatsappClient.sendMessage(formattedPhone, message);
+    await clients[clientId].whatsappClient.sendMessage(formattedPhone, message);
     res.json({ success: true, message: "Message sent successfully!" });
   } catch (error) {
     console.error("Error sending message:", error);

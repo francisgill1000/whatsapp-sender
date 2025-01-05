@@ -172,7 +172,10 @@
     </div>
 
     <script>
-      const ws = new WebSocket("ws://167.172.148.248:3000");
+      const clientId = "client_" + Math.random().toString(36).substr(2, 9); // Generate a unique client ID
+      const ws = new WebSocket(
+        `ws://167.172.148.248:3000?clientId=${clientId}`
+      ); // Send the client ID on connection
 
       const loadingIndicator = document.getElementById("loadingIndicator");
       const qrContainer = document.getElementById("qrContainer");
@@ -189,34 +192,35 @@
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        if (data.type === "qr") {
-          const qrCode = document.getElementById("qrCode");
-          qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-            data.qr
-          )}`;
-          qrContainer.style.display = "block";
-          statusText.textContent = "Scan the QR code to connect.";
-          statusIcon.className = "red";
-          apiExample.style.display = "none";
-          loadingIndicator.style.display = "none";
-          reloadContainer.style.display = "none";
-          console.log("🚀 ~ QR Code:", data.qr);
-        } else if (data.type === "status" && data.ready) {
-          statusText.textContent = "WhatsApp client is ready.";
-          statusIcon.className = "green";
-          qrContainer.style.display = "none";
-          apiExample.style.display = "block";
-          loadingIndicator.style.display = "none";
-          reloadContainer.style.display = "none";
-          console.log("WhatsApp client is ready.");
-        } else if (data.type === "error") {
-          statusText.textContent = `Error: ${data.message}`;
-          statusIcon.className = "red";
-          qrContainer.style.display = "none";
-          apiExample.style.display = "none";
-          loadingIndicator.style.display = "none";
-          reloadContainer.style.display = "block";
-          console.error("Error received:", data.message);
+        if (data.clientId === clientId) {
+          // Ensure the data is for the current client
+          if (data.type === "qr") {
+            const qrCode = document.getElementById("qrCode");
+            qrCode.src = data.qr;
+            qrContainer.style.display = "block";
+            statusText.textContent = "Scan the QR code to connect.";
+            statusIcon.className = "red";
+            apiExample.style.display = "none";
+            loadingIndicator.style.display = "none";
+            reloadContainer.style.display = "none";
+            console.log("🚀 ~ QR Code:", data.qr);
+          } else if (data.type === "status" && data.ready) {
+            statusText.textContent = "WhatsApp client is ready.";
+            statusIcon.className = "green";
+            qrContainer.style.display = "none";
+            apiExample.style.display = "block";
+            loadingIndicator.style.display = "none";
+            reloadContainer.style.display = "none";
+            console.log("WhatsApp client is ready.");
+          } else if (data.type === "error") {
+            statusText.textContent = `Error: ${data.message}`;
+            statusIcon.className = "red";
+            qrContainer.style.display = "none";
+            apiExample.style.display = "none";
+            loadingIndicator.style.display = "none";
+            reloadContainer.style.display = "block";
+            console.error("Error received:", data.message);
+          }
         }
       };
 
