@@ -3,9 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WhatsApp Web Server</title>
-    <!-- <link rel="stylesheet" href="styles.css" /> -->
-
+    <title>Document</title>
     <style>
       body {
         font-family: Arial, sans-serif;
@@ -150,19 +148,19 @@
           <code>http://167.172.148.248:3001/api/send-message</code>
         </p>
         <p><strong>Request:</strong></p>
-        <pre>
-{
-  "phone": "971xxxxxxxxx",
-  "message": "test message"
-}
-      </pre
-        >
+        <pre id="apiRequestExample">
+        {
+          "clientId": "client_XXXXXXXXX",  <!-- This will be updated dynamically -->
+          "phone": "971xxxxxxxxx",
+          "message": "test message"
+        }
+      </pre>
         <p><strong>Response:</strong></p>
         <pre>
-{
-  "success": true,
-  "message": "Message sent successfully!"
-}
+        {
+          "success": true,
+          "message": "Message sent successfully!"
+        }
       </pre
         >
       </div>
@@ -170,61 +168,68 @@
         <button id="reloadButton">Reload Page</button>
       </div>
     </div>
-
     <script>
-      const clientId = "client_" + Math.random().toString(36).substr(2, 9); // Generate a unique client ID
-      const ws = new WebSocket(
-        `ws://167.172.148.248:3000?clientId=${clientId}`
-      ); // Send the client ID on connection
+      // Check if clientId exists in localStorage, otherwise generate a new one
+      let clientId = localStorage.getItem("clientId");
+      if (!clientId) {
+        clientId = "client_" + Math.random().toString(36).substr(2, 9); // Generate a new clientId
+        localStorage.setItem("clientId", clientId); // Save it to localStorage
+      }
 
-      const loadingIndicator = document.getElementById("loadingIndicator");
-      const qrContainer = document.getElementById("qrContainer");
-      const statusText = document.getElementById("statusText");
-      const statusIcon = document.getElementById("statusIcon");
-      const apiExample = document.getElementById("apiExample");
-      const reloadContainer = document.getElementById("reloadContainer");
-      const reloadButton = document.getElementById("reloadButton");
+      const ws = new WebSocket(`ws://localhost:3000?clientId=${clientId}`); // Send the client ID on connection
+
+      // Update the API request example dynamically with the clientId
+      const apiRequestExample = document.getElementById("apiRequestExample");
+      apiRequestExample.textContent = apiRequestExample.textContent.replace(
+        "client_XXXXXXXXX",
+        clientId
+      );
 
       ws.onopen = () => {
+        console.log("WebSocket connection established.");
         loadingIndicator.style.display = "block";
+
+        // Send the generated clientId to the server immediately after connection
+        ws.send(JSON.stringify({ type: "clientId", clientId }));
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
+        console.log("Received message:", data);
 
-        if (data.clientId === clientId) {
-          // Ensure the data is for the current client
-          if (data.type === "qr") {
-            const qrCode = document.getElementById("qrCode");
-            qrCode.src = data.qr;
-            qrContainer.style.display = "block";
-            statusText.textContent = "Scan the QR code to connect.";
-            statusIcon.className = "red";
-            apiExample.style.display = "none";
-            loadingIndicator.style.display = "none";
-            reloadContainer.style.display = "none";
-            console.log("🚀 ~ QR Code:", data.qr);
-          } else if (data.type === "status" && data.ready) {
-            statusText.textContent = "WhatsApp client is ready.";
-            statusIcon.className = "green";
-            qrContainer.style.display = "none";
-            apiExample.style.display = "block";
-            loadingIndicator.style.display = "none";
-            reloadContainer.style.display = "none";
-            console.log("WhatsApp client is ready.");
-          } else if (data.type === "error") {
-            statusText.textContent = `Error: ${data.message}`;
-            statusIcon.className = "red";
-            qrContainer.style.display = "none";
-            apiExample.style.display = "none";
-            loadingIndicator.style.display = "none";
-            reloadContainer.style.display = "block";
-            console.error("Error received:", data.message);
-          }
+        if (data.type === "clientId") {
+          console.log("Server acknowledged clientId:", data.clientId);
+          // You can now use this clientId for further communication
+        } else if (data.type === "qr") {
+          const qrCode = document.getElementById("qrCode");
+          qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+            data.qr
+          )}`;
+          qrContainer.style.display = "block";
+          statusText.textContent = "Scan the QR code to connect.";
+          statusIcon.className = "red";
+          apiExample.style.display = "none";
+          loadingIndicator.style.display = "none";
+          reloadContainer.style.display = "none";
+        } else if (data.type === "status" && data.ready) {
+          statusText.textContent = "WhatsApp client is ready.";
+          statusIcon.className = "green";
+          qrContainer.style.display = "none";
+          apiExample.style.display = "block";
+          loadingIndicator.style.display = "none";
+          reloadContainer.style.display = "none";
+        } else if (data.type === "error") {
+          statusText.textContent = `Error: ${data.message}`;
+          statusIcon.className = "red";
+          qrContainer.style.display = "none";
+          apiExample.style.display = "none";
+          loadingIndicator.style.display = "none";
+          reloadContainer.style.display = "block";
         }
       };
 
       ws.onclose = () => {
+        console.log("WebSocket connection closed.");
         statusText.textContent = "Connection lost. Please refresh the page.";
         statusIcon.className = "red";
         apiExample.style.display = "none";

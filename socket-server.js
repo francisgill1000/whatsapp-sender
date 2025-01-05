@@ -16,107 +16,119 @@ app.use(cors());
 
 let clients = {}; // Store clients by client id
 
-wss.on("connection", async (ws) => {
-  const clientId = generateClientId(); // Generate a unique client ID for each connection
-  await init(ws, clientId);
+wss.on("connection", (ws) => {
+  ws.on("message", async (message) => {
+    const data = JSON.parse(message);
+    if (data.type === "clientId") {
+      const clientId = data.clientId;
+      console.log(`Client connected with ID: ${clientId}`);
 
-  console.log("Client connected");
+      // Store WebSocket connection associated with the clientId
+      clients[clientId] = { ws };
 
-  ws.on("close", () => {
-    console.log("Client disconnected.");
-    if (clients[clientId]) {
-      clients[clientId].whatsappClient.destroy();
-      delete clients[clientId];
+      // Initialize WhatsApp client for this clientId
+      await init(ws, clientId);
     }
   });
 
-  ws.send(JSON.stringify({ message: "Hello from server", clientId }));
+  ws.on("close", async () => {
+    for (let clientId in clients) {
+      if (clients[clientId].ws === ws) {
+        console.log(`Client with ID ${clientId} disconnected.`);
+        // Clean up the client
+        delete clients[clientId];
+        break;
+      }
+    }
+  });
 });
 
-// Send QR code and other data for a specific client
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  if (data.type === "qr") {
-    const qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-      data.qr
-    )}`;
-    ws.send(JSON.stringify({ type: "qr", clientId, qr: qrCode }));
-  }
-};
-
 server.listen(3000, () => {
-  console.log("WebSocket server running on ws://167.172.148.248:3000");
+  console.log("WebSocket server running on ws://localhost:3000");
 });
 
 async function init(ws, clientId) {
   try {
-    // Disconnect the existing client if already initialized
-    if (clients[clientId]) {
-      console.log("Disconnecting existing client...");
-      await clients[clientId].whatsappClient.destroy();
+    if (clients[clientId] && clients[clientId].whatsappClient) {
+      console.log(`Disconnecting existing client ${clientId}...`);
+      try {
+        await clients[clientId].whatsappClient.destroy();
+      } catch (error) {
+        console.error(
+          `Error during client destruction for ${clientId}:`,
+          error.message
+        );
+      }
     }
 
     const whatsappClient = new Client({
-      authStrategy: new LocalAuth({
-        clientId: clientId, // Use unique client ID
-      }),
-      puppeteer: {
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        executablePath: "/snap/bin/chromium", // Replace with your Chromium path
-      },
+      authStrategy: new LocalAuth({ clientId }),
     });
 
-    let lastQrTime = null;
-
-    // Emit QR code via WebSocket
+    // Add event listeners and initialization logic
     whatsappClient.on("qr", (qr) => {
-      const currentTime = Date.now();
-
-      if (lastQrTime) {
-        const timeDifference = (currentTime - lastQrTime) / 1000;
-        console.log(`QR Code received again after ${timeDifference} seconds.`);
-      } else {
-        console.log("QR Code received for the first time.");
-      }
-
-      lastQrTime = currentTime;
-      ws.send(JSON.stringify({ type: "qr", qr })); // Send QR code to the client
+      ws.send(JSON.stringify({ type: "qr", qr }));
     });
 
     whatsappClient.on("ready", () => {
-      console.log("Client is ready");
+      console.log(`Client ${clientId} is ready.`);
       clients[clientId].isClientReady = true;
-      ws.send(JSON.stringify({ type: "status", ready: true })); // Notify client that WhatsApp is ready
+      ws.send(JSON.stringify({ type: "status", ready: true }));
     });
 
     whatsappClient.on("auth_failure", (message) => {
-      console.log("Authentication failed:", message);
       ws.send(
         JSON.stringify({
           type: "error",
           message: `Authentication failed: ${message}`,
         })
-      ); // Notify client about auth failure
+      );
     });
 
+    const fs = require("fs");
+    const path = require("path");
+
     whatsappClient.on("disconnected", (reason) => {
-      console.log("Disconnected:", reason);
-      clients[clientId].isClientReady = false;
-      ws.send(
-        JSON.stringify({
-          type: "error",
-          message: `Disconnected: ${reason}`,
-        })
-      ); // Notify client about disconnection
+      console.log(`Client ${clientId} disconnected: ${reason}`);
+
+      // Delete client from the active clients object
+
+      // Notify WebSocket
+      try {
+        ws.send(
+          JSON.stringify({ type: "error", message: `Disconnected: ${reason}` })
+        );
+      } catch (error) {
+        console.warn(
+          `Failed to send message to WebSocket for client ${clientId}: ${error.message}`
+        );
+      }
+
+      // Schedule deletion of session directory after 10 seconds
+      setTimeout(async () => {
+        delete clients[clientId];
+
+        const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
+
+        fs.rm(sessionDir, { recursive: true, force: true }, (err) => {
+          if (err) {
+            console.error(
+              `Failed to delete session directory ${sessionDir}: ${err.message}`
+            );
+          } else {
+            console.log(
+              `Session directory ${sessionDir} deleted successfully.`
+            );
+          }
+        });
+      }, 10000); // 10 seconds
     });
 
     // Save client state
-    clients[clientId] = { whatsappClient, isClientReady: false };
-
-    // Initialize the client
-    whatsappClient.initialize();
+    clients[clientId] = { whatsappClient, ws, isClientReady: false };
+    await whatsappClient.initialize();
   } catch (error) {
-    console.error("Error initializing client:", error);
+    console.error(`Error initializing client ${clientId}:`, error);
     ws.send(
       JSON.stringify({
         type: "error",
@@ -124,11 +136,6 @@ async function init(ws, clientId) {
       })
     );
   }
-}
-
-// Generate a unique client ID for each connection
-function generateClientId() {
-  return `client_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 // API to send a message for a specific client
@@ -163,5 +170,5 @@ app.get("/server", (req, res) => {
 // Start the server
 const port = 3001;
 app.listen(port, () => {
-  console.log(`Server running at http://167.172.148.248:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });
