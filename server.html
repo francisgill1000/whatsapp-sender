@@ -176,7 +176,7 @@
         localStorage.setItem("clientId", clientId); // Save it to localStorage
       }
 
-      const ws = new WebSocket(`ws://localhost:3000?clientId=${clientId}`); // Send the client ID on connection
+      const ws = new WebSocket(`ws://167.172.148.248:3000?clientId=${clientId}`); // Send the client ID on connection
 
       // Update the API request example dynamically with the clientId
       const apiRequestExample = document.getElementById("apiRequestExample");
