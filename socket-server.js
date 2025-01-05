@@ -2,7 +2,6 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 
-
 const http = require("http");
 const { WebSocketServer } = require("ws");
 const { Client, LocalAuth } = require("whatsapp-web.js");
@@ -17,18 +16,16 @@ app.use(express.json());
 app.use(cors());
 
 let whatsappClient = null;
+let isClientReady = null;
 
 wss.on("connection", async (ws) => {
   await init(ws);
 
   console.log("Client connected");
 
-  ws.on("message", async (message) => {
-    const data = JSON.parse(message);
-  });
-
   ws.on("close", () => {
     console.log("Client disconnected.");
+    whatsappClient.destroy();
   });
 
   ws.send(JSON.stringify({ message: "Hello from server" }));
