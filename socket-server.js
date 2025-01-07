@@ -23,19 +23,20 @@ wss.on("connection", (ws) => {
       const clientId = data.clientId;
       console.log(`Client connected with ID: ${clientId}`);
 
-      // Store WebSocket connection associated with the clientId
-      clients[clientId] = { ws };
-
-      // Initialize WhatsApp client for this clientId
-      await init(ws, clientId);
+      // Store WebSocket connection and initialize WhatsApp client
+      clients[clientId] = { ws, ...clients[clientId] };
+      if (!clients[clientId].whatsappClient) {
+        await init(ws, clientId);
+      } else {
+        console.log(`Client ${clientId} already initialized.`);
+      }
     }
   });
 
-  ws.on("close", async () => {
-    for (let clientId in clients) {
+  ws.on("close", () => {
+    for (const clientId in clients) {
       if (clients[clientId].ws === ws) {
         console.log(`Client with ID ${clientId} disconnected.`);
-        // Clean up the client
         delete clients[clientId];
         break;
       }
@@ -43,38 +44,42 @@ wss.on("connection", (ws) => {
   });
 });
 
+
 server.listen(3000, () => {
   console.log("WebSocket server running on ws://localhost:3000");
 });
 
 async function init(ws, clientId) {
   try {
+    // Check if a client already exists for the clientId
     if (clients[clientId] && clients[clientId].whatsappClient) {
+      console.log(`Disconnecting existing client ${clientId}...`);
       try {
         await clients[clientId].whatsappClient.destroy();
       } catch (error) {
         console.error(
-          `Error destroying existing client for ${clientId}:`,
+          `Error during client destruction for ${clientId}:`,
           error.message
         );
       }
     }
 
+    // Remove any leftover locks or files for the session
+    const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
+    if (fs.existsSync(sessionDir)) {
+      fs.rmSync(sessionDir, { recursive: true, force: true });
+      console.log(`Cleaned up session directory for client ${clientId}`);
+    }
+
     const whatsappClient = new Client({
       authStrategy: new LocalAuth({ clientId }),
       puppeteer: {
-        args: [
-          "--no-sandbox",
-          "--disable-setuid-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-extensions",
-          "--remote-debugging-port=9222", // Optional for debugging
-        ],
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
         executablePath: "/snap/bin/chromium", // Replace with your Chromium path
       },
     });
 
-    // Add event listeners and initialization logic
+    // Add event listeners
     whatsappClient.on("qr", (qr) => {
       ws.send(JSON.stringify({ type: "qr", qr }));
     });
@@ -96,42 +101,13 @@ async function init(ws, clientId) {
 
     whatsappClient.on("disconnected", (reason) => {
       console.log(`Client ${clientId} disconnected: ${reason}`);
-
-      // Delete client from the active clients object
-
-      // Notify WebSocket
-      try {
-        ws.send(
-          JSON.stringify({ type: "error", message: `Disconnected: ${reason}` })
-        );
-      } catch (error) {
-        console.warn(
-          `Failed to send message to WebSocket for client ${clientId}: ${error.message}`
-        );
-      }
-
-      // Schedule deletion of session directory after 10 seconds
-      setTimeout(async () => {
-        // delete clients[clientId];
-
-        const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
-        if (fs.existsSync(sessionDir)) {
-          fs.rm(sessionDir, { recursive: true, force: true }, (err) => {
-            if (err) {
-              console.error(
-                `Failed to delete session directory ${sessionDir}: ${err.message}`
-              );
-            } else {
-              console.log(
-                `Session directory ${sessionDir} deleted successfully.`
-              );
-            }
-          });
-        }
-      }, 10000); // 10 seconds
+      ws.send(
+        JSON.stringify({ type: "error", message: `Disconnected: ${reason}` })
+      );
+      delete clients[clientId];
     });
 
-    // Save client state
+    // Save the client
     clients[clientId] = { whatsappClient, ws, isClientReady: false };
     await whatsappClient.initialize();
   } catch (error) {
