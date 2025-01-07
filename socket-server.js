@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
+const fs = require("fs");
 const path = require("path");
-
 const http = require("http");
 const { WebSocketServer } = require("ws");
 const { Client, LocalAuth } = require("whatsapp-web.js");
@@ -64,8 +64,15 @@ async function init(ws, clientId) {
     const whatsappClient = new Client({
       authStrategy: new LocalAuth({ clientId }),
       puppeteer: {
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-extensions",
+          "--remote-debugging-port=9222", // Optional for debugging
+        ],
         executablePath: "/snap/bin/chromium", // Replace with your Chromium path
+        userDataDir: path.join(".wwebjs_auth", `user_data_${clientId}`), // Isolate user data
       },
     });
 
@@ -88,9 +95,6 @@ async function init(ws, clientId) {
         })
       );
     });
-
-    const fs = require("fs");
-    const path = require("path");
 
     whatsappClient.on("disconnected", (reason) => {
       console.log(`Client ${clientId} disconnected: ${reason}`);
