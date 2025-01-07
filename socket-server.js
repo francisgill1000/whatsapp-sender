@@ -50,12 +50,11 @@ server.listen(3000, () => {
 async function init(ws, clientId) {
   try {
     if (clients[clientId] && clients[clientId].whatsappClient) {
-      console.log(`Disconnecting existing client ${clientId}...`);
       try {
         await clients[clientId].whatsappClient.destroy();
       } catch (error) {
         console.error(
-          `Error during client destruction for ${clientId}:`,
+          `Error destroying existing client for ${clientId}:`,
           error.message
         );
       }
@@ -72,7 +71,6 @@ async function init(ws, clientId) {
           "--remote-debugging-port=9222", // Optional for debugging
         ],
         executablePath: "/snap/bin/chromium", // Replace with your Chromium path
-        userDataDir: path.join(".wwebjs_auth", `user_data_${clientId}`), // Isolate user data
       },
     });
 
@@ -114,21 +112,22 @@ async function init(ws, clientId) {
 
       // Schedule deletion of session directory after 10 seconds
       setTimeout(async () => {
-        delete clients[clientId];
+        // delete clients[clientId];
 
         const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
-
-        fs.rm(sessionDir, { recursive: true, force: true }, (err) => {
-          if (err) {
-            console.error(
-              `Failed to delete session directory ${sessionDir}: ${err.message}`
-            );
-          } else {
-            console.log(
-              `Session directory ${sessionDir} deleted successfully.`
-            );
-          }
-        });
+        if (fs.existsSync(sessionDir)) {
+          fs.rm(sessionDir, { recursive: true, force: true }, (err) => {
+            if (err) {
+              console.error(
+                `Failed to delete session directory ${sessionDir}: ${err.message}`
+              );
+            } else {
+              console.log(
+                `Session directory ${sessionDir} deleted successfully.`
+              );
+            }
+          });
+        }
       }, 10000); // 10 seconds
     });
 
