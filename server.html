@@ -4,127 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Document</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        background-color: #f9f9f9;
-        margin: 0;
-        padding: 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        height: 100vh;
-      }
-
-      .container {
-        text-align: center;
-        background: #ffffff;
-        padding: 20px 30px;
-        border-radius: 8px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      }
-
-      h1 {
-        font-size: 24px;
-        margin-bottom: 20px;
-        color: #333;
-      }
-
-      h3 {
-        font-size: 18px;
-        color: #555;
-      }
-
-      #qrCode {
-        border: 2px solid #ccc;
-        border-radius: 10px;
-        display: block;
-        margin: 0 auto;
-      }
-
-      #statusMessage {
-        margin-top: 20px;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-      }
-
-      #statusIcon {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background-color: red;
-      }
-
-      .green {
-        background-color: #1eff1e !important;
-      }
-
-      .red {
-        background-color: red !important;
-      }
-
-      .loading {
-        margin-top: 20px;
-        text-align: center;
-      }
-
-      .spinner {
-        width: 25px;
-        height: 25px;
-        border: 5px solid #ccc;
-        border-top: 5px solid black;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-
-      #apiExample {
-        margin-top: 30px;
-        text-align: left;
-        display: none;
-        background-color: #f8f8f8;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-
-      pre {
-        background: #eeeeee;
-        padding: 10px;
-        border-radius: 5px;
-        overflow-x: auto;
-      }
-
-      #reloadContainer {
-        display: none;
-        margin-top: 20px;
-      }
-
-      #reloadButton {
-        padding: 10px 20px;
-        background-color: #1eff1e;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-      }
-
-      #reloadButton:hover {
-        background-color: #17c617;
-      }
-    </style>
   </head>
 
   <body>
@@ -135,7 +14,7 @@
           <input
             type="text"
             id="serverInput"
-            placeholder="ws://example.com:3000"
+            value="ws://localhost:3000"
             style="
               padding: 5px 5px;
               width: 80%;
@@ -168,12 +47,31 @@
         <img style="padding: 20px" id="qrCode" src="" alt="QR Code" />
       </div>
       <div id="statusMessage">
-        <!-- <div id="statusIcon" class="red"></div> -->
+        <div id="statusIcon" class=""></div>
         <span id="statusText"></span>
       </div>
       <div id="apiExample" style="display: none">
         <h3>API Usage Example</h3>
         <!-- Your existing API example content -->
+        <strong>Endpoint:</strong>
+        <code>http://167.172.148.248:3001/api/send-message</code>
+      </p>
+      <p><strong>Request:</strong></p>
+      <pre id="apiRequestExample">
+      {
+        "clientId": "client_XXXXXXXXX",  <!-- This will be updated dynamically -->
+        "phone": "971xxxxxxxxx",
+        "message": "test message"
+      }
+    </pre>
+      <p><strong>Response:</strong></p>
+      <pre>
+      {
+        "success": true,
+        "message": "Message sent successfully!"
+      }
+    </pre
+      >
       </div>
       <div id="reloadContainer" style="display: none">
         <button id="reloadButton">Reload Page</button>
@@ -197,6 +95,8 @@
       const reloadContainer = document.getElementById("reloadContainer");
       const reloadButton = document.getElementById("reloadButton");
       const qrCode = document.getElementById("qrCode");
+
+
 
       connectButton.addEventListener("click", () => {
         const serverUrl = serverInput.value.trim();
@@ -237,6 +137,11 @@
             apiExample.style.display = "block";
             loadingIndicator.style.display = "none";
             reloadContainer.style.display = "none";
+            const apiRequestExample = document.getElementById("apiRequestExample");
+      apiRequestExample.textContent = apiRequestExample.textContent.replace(
+        "client_XXXXXXXXX",
+        clientId
+      );
           } else if (data.type === "error") {
             statusText.textContent = `Error: ${data.message}`;
             statusIcon.className = "red";

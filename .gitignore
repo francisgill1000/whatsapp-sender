@@ -3,3 +3,4 @@ node_modules
 .wwebjs_cache
 dist
 message_log.csv
+frontend

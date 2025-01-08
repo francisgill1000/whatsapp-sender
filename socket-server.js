@@ -19,6 +19,52 @@ let clients = {}; // Store clients by client id
 wss.on("connection", (ws) => {
   ws.on("message", async (message) => {
     const data = JSON.parse(message);
+
+    if (data.type === "disconnect") {
+      const clientId = data.clientId;
+
+      if (clients[clientId]) {
+        try {
+          // Destroy the WhatsApp client instance
+          await clients[clientId].whatsappClient.destroy();
+          
+          console.log(`WhatsApp client destroyed for ID: ${clientId}`);
+
+          // Send a success message back to the client
+          ws.send(
+            JSON.stringify({
+              type: "status",
+              ready: false,
+              message: `WhatsApp client with ID ${clientId} has been disconnected.`,
+            })
+          );
+        } catch (error) {
+          console.error(
+            `Error destroying WhatsApp client for ${clientId}:`,
+            error.message
+          );
+
+          // Send an error message back to the client
+          ws.send(
+            JSON.stringify({
+              type: "status",
+              ready: false,
+              message: `Error disconnecting WhatsApp client for ID ${clientId}: ${error.message}`,
+            })
+          );
+        }
+      } else {
+        console.warn(`Client ID ${clientId} not found.`);
+        ws.send(
+          JSON.stringify({
+            type: "status",
+            ready: false,
+            message: `Client ID ${clientId} not found.`,
+          })
+        );
+      }
+    }
+
     if (data.type === "clientId") {
       const clientId = data.clientId;
       console.log(`Client connected with ID: ${clientId}`);
@@ -29,6 +75,13 @@ wss.on("connection", (ws) => {
         await init(ws, clientId);
       } else {
         console.log(`Client ${clientId} already initialized.`);
+        ws.send(
+          JSON.stringify({
+            type: "status",
+            ready: true,
+            message: `Client ${clientId} already initialized.`,
+          })
+        );
       }
     }
   });
@@ -43,7 +96,6 @@ wss.on("connection", (ws) => {
     }
   });
 });
-
 
 server.listen(3000, () => {
   console.log("WebSocket server running on ws://localhost:3000");
@@ -73,10 +125,10 @@ async function init(ws, clientId) {
 
     const whatsappClient = new Client({
       authStrategy: new LocalAuth({ clientId }),
-      puppeteer: {
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        executablePath: "/snap/bin/chromium", // Replace with your Chromium path
-      },
+      // puppeteer: {
+      //   args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      //   executablePath: "/snap/bin/chromium", // Replace with your Chromium path
+      // },
     });
 
     // Add event listeners
@@ -87,7 +139,13 @@ async function init(ws, clientId) {
     whatsappClient.on("ready", () => {
       console.log(`Client ${clientId} is ready.`);
       clients[clientId].isClientReady = true;
-      ws.send(JSON.stringify({ type: "status", ready: true }));
+      ws.send(
+        JSON.stringify({
+          type: "status",
+          ready: true,
+          message: `Client ${clientId} is ready.`,
+        })
+      );
     });
 
     whatsappClient.on("auth_failure", (message) => {
