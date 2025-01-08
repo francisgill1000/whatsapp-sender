@@ -126,10 +126,40 @@
       }
     </style>
   </head>
+
   <body>
     <div class="container">
-      <h1>WhatsApp Web Server</h1>
-      <div class="loading" id="loadingIndicator">
+      <h1>WhatsApp Sender</h1>
+      <div id="serverInputContainer">
+        <div style="display: flex; justify-content: space-between">
+          <input
+            type="text"
+            id="serverInput"
+            placeholder="ws://example.com:3000"
+            style="
+              padding: 5px 5px;
+              width: 80%;
+              border-radius: 5px;
+              border: 1px solid #ccc;
+            "
+          />
+          &nbsp;
+          <button
+            id="connectButton"
+            style="
+              padding: 5px 10px;
+              background-color: #1eff1e;
+              color: white;
+              border: none;
+              border-radius: 5px;
+              cursor: pointer;
+            "
+          >
+            Connect
+          </button>
+        </div>
+      </div>
+      <div id="loadingIndicator" class="loading" style="display: none">
         <div class="spinner"></div>
         <p>Waiting for connection...</p>
       </div>
@@ -138,103 +168,93 @@
         <img style="padding: 20px" id="qrCode" src="" alt="QR Code" />
       </div>
       <div id="statusMessage">
-        <div id="statusIcon" class="red"></div>
+        <!-- <div id="statusIcon" class="red"></div> -->
         <span id="statusText"></span>
       </div>
-      <div id="apiExample">
+      <div id="apiExample" style="display: none">
         <h3>API Usage Example</h3>
-        <p>
-          <strong>Endpoint:</strong>
-          <code>http://167.172.148.248:3001/api/send-message</code>
-        </p>
-        <p><strong>Request:</strong></p>
-        <pre id="apiRequestExample">
-        {
-          "clientId": "client_XXXXXXXXX",  <!-- This will be updated dynamically -->
-          "phone": "971xxxxxxxxx",
-          "message": "test message"
-        }
-      </pre>
-        <p><strong>Response:</strong></p>
-        <pre>
-        {
-          "success": true,
-          "message": "Message sent successfully!"
-        }
-      </pre
-        >
+        <!-- Your existing API example content -->
       </div>
       <div id="reloadContainer" style="display: none">
         <button id="reloadButton">Reload Page</button>
       </div>
     </div>
     <script>
-      // Check if clientId exists in localStorage, otherwise generate a new one
+      let ws; // WebSocket variable
       let clientId = localStorage.getItem("clientId");
       if (!clientId) {
-        clientId = "client_" + Math.random().toString(36).substr(2, 9); // Generate a new clientId
-        localStorage.setItem("clientId", clientId); // Save it to localStorage
+        clientId = "client_" + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem("clientId", clientId);
       }
 
-      const ws = new WebSocket(`ws://167.172.148.248:3000?clientId=${clientId}`); // Send the client ID on connection
+      const connectButton = document.getElementById("connectButton");
+      const serverInput = document.getElementById("serverInput");
+      const statusText = document.getElementById("statusText");
+      const statusIcon = document.getElementById("statusIcon");
+      const qrContainer = document.getElementById("qrContainer");
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      const apiExample = document.getElementById("apiExample");
+      const reloadContainer = document.getElementById("reloadContainer");
+      const reloadButton = document.getElementById("reloadButton");
+      const qrCode = document.getElementById("qrCode");
 
-      // Update the API request example dynamically with the clientId
-      const apiRequestExample = document.getElementById("apiRequestExample");
-      apiRequestExample.textContent = apiRequestExample.textContent.replace(
-        "client_XXXXXXXXX",
-        clientId
-      );
+      connectButton.addEventListener("click", () => {
+        const serverUrl = serverInput.value.trim();
+        if (!serverUrl) {
+          alert("Please enter a valid WebSocket server URL.");
+          return;
+        }
+        connectToWebSocket(serverUrl);
+      });
 
-      ws.onopen = () => {
-        console.log("WebSocket connection established.");
+      const connectToWebSocket = (serverUrl) => {
+        ws = new WebSocket(`${serverUrl}?clientId=${clientId}`);
         loadingIndicator.style.display = "block";
 
-        // Send the generated clientId to the server immediately after connection
-        ws.send(JSON.stringify({ type: "clientId", clientId }));
-      };
+        ws.onopen = () => {
+          console.log("WebSocket connection established.");
+          ws.send(JSON.stringify({ type: "clientId", clientId }));
+        };
 
-      ws.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        console.log("Received message:", data);
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log("Received message:", data);
 
-        if (data.type === "clientId") {
-          console.log("Server acknowledged clientId:", data.clientId);
-          // You can now use this clientId for further communication
-        } else if (data.type === "qr") {
-          const qrCode = document.getElementById("qrCode");
-          qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-            data.qr
-          )}`;
-          qrContainer.style.display = "block";
-          statusText.textContent = "Scan the QR code to connect.";
+          if (data.type === "qr") {
+            qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+              data.qr
+            )}`;
+            qrContainer.style.display = "block";
+            statusText.textContent = "Scan the QR code to connect.";
+            statusIcon.className = "red";
+            apiExample.style.display = "none";
+            loadingIndicator.style.display = "none";
+            reloadContainer.style.display = "none";
+          } else if (data.type === "status" && data.ready) {
+            statusText.textContent = "WhatsApp client is ready.";
+            statusIcon.className = "green";
+            qrContainer.style.display = "none";
+            apiExample.style.display = "block";
+            loadingIndicator.style.display = "none";
+            reloadContainer.style.display = "none";
+          } else if (data.type === "error") {
+            statusText.textContent = `Error: ${data.message}`;
+            statusIcon.className = "red";
+            qrContainer.style.display = "none";
+            apiExample.style.display = "none";
+            loadingIndicator.style.display = "none";
+            reloadContainer.style.display = "block";
+          }
+        };
+
+        ws.onclose = () => {
+          console.log("WebSocket connection closed.");
+          statusText.textContent = "Connection lost. Please refresh the page.";
           statusIcon.className = "red";
-          apiExample.style.display = "none";
-          loadingIndicator.style.display = "none";
-          reloadContainer.style.display = "none";
-        } else if (data.type === "status" && data.ready) {
-          statusText.textContent = "WhatsApp client is ready.";
-          statusIcon.className = "green";
-          qrContainer.style.display = "none";
-          apiExample.style.display = "block";
-          loadingIndicator.style.display = "none";
-          reloadContainer.style.display = "none";
-        } else if (data.type === "error") {
-          statusText.textContent = `Error: ${data.message}`;
-          statusIcon.className = "red";
-          qrContainer.style.display = "none";
           apiExample.style.display = "none";
           loadingIndicator.style.display = "none";
           reloadContainer.style.display = "block";
-        }
-      };
-
-      ws.onclose = () => {
-        console.log("WebSocket connection closed.");
-        statusText.textContent = "Connection lost. Please refresh the page.";
-        statusIcon.className = "red";
-        apiExample.style.display = "none";
-        loadingIndicator.style.display = "none";
-        reloadContainer.style.display = "block";
+        };
       };
 
       reloadButton.addEventListener("click", () => {
