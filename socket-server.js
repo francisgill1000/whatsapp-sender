@@ -116,12 +116,12 @@ async function init(ws, clientId) {
       }
     }
 
-    // Remove any leftover locks or files for the session
-    const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
-    if (fs.existsSync(sessionDir)) {
-      fs.rmSync(sessionDir, { recursive: true, force: true });
-      console.log(`Cleaned up session directory for client ${clientId}`);
-    }
+    // // Remove any leftover locks or files for the session
+    // const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
+    // if (fs.existsSync(sessionDir)) {
+    //   fs.rmSync(sessionDir, { recursive: true, force: true });
+    //   console.log(`Cleaned up session directory for client ${clientId}`);
+    // }
 
     const whatsappClient = new Client({
       authStrategy: new LocalAuth({ clientId }),
