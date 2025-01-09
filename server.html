@@ -1,170 +1,88 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-  </head>
 
-  <body>
-    <div class="container">
-      <h1>WhatsApp Sender</h1>
-      <div id="serverInputContainer">
-        <div style="display: flex; justify-content: space-between">
-          <input
-            type="text"
-            id="serverInput"
-            value="ws://localhost:3000"
-            style="
-              padding: 5px 5px;
-              width: 80%;
-              border-radius: 5px;
-              border: 1px solid #ccc;
-            "
-          />
-          &nbsp;
-          <button
-            id="connectButton"
-            style="
-              padding: 5px 10px;
-              background-color: #1eff1e;
-              color: white;
-              border: none;
-              border-radius: 5px;
-              cursor: pointer;
-            "
-          >
-            Connect
-          </button>
-        </div>
-      </div>
-      <div id="loadingIndicator" class="loading" style="display: none">
-        <div class="spinner"></div>
-        <p>Waiting for connection...</p>
-      </div>
-      <div id="qrContainer" style="display: none">
-        <h3>Scan the QR Code:</h3>
-        <img style="padding: 20px" id="qrCode" src="" alt="QR Code" />
-      </div>
-      <div id="statusMessage">
-        <div id="statusIcon" class=""></div>
-        <span id="statusText"></span>
-      </div>
-      <div id="apiExample" style="display: none">
-        <h3>API Usage Example</h3>
-        <!-- Your existing API example content -->
-        <strong>Endpoint:</strong>
-        <code>http://167.172.148.248:3001/api/send-message</code>
-      </p>
-      <p><strong>Request:</strong></p>
-      <pre id="apiRequestExample">
-      {
-        "clientId": "client_XXXXXXXXX",  <!-- This will be updated dynamically -->
-        "phone": "971xxxxxxxxx",
-        "message": "test message"
-      }
-    </pre>
-      <p><strong>Response:</strong></p>
-      <pre>
-      {
-        "success": true,
-        "message": "Message sent successfully!"
-      }
-    </pre
-      >
-      </div>
-      <div id="reloadContainer" style="display: none">
-        <button id="reloadButton">Reload Page</button>
-      </div>
-    </div>
-    <script>
-      let ws; // WebSocket variable
-      let clientId = localStorage.getItem("clientId");
-      if (!clientId) {
-        clientId = "client_" + Math.random().toString(36).substr(2, 9);
-        localStorage.setItem("clientId", clientId);
-      }
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Sender</title>
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.x"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x"></script>
+</head>
 
-      const connectButton = document.getElementById("connectButton");
-      const serverInput = document.getElementById("serverInput");
-      const statusText = document.getElementById("statusText");
-      const statusIcon = document.getElementById("statusIcon");
-      const qrContainer = document.getElementById("qrContainer");
-      const loadingIndicator = document.getElementById("loadingIndicator");
-      const apiExample = document.getElementById("apiExample");
-      const reloadContainer = document.getElementById("reloadContainer");
-      const reloadButton = document.getElementById("reloadButton");
-      const qrCode = document.getElementById("qrCode");
+<body>
+  <div id="app">
+    <v-container>
+      <v-row class="mb-3">
+        <v-col cols="12">
+          <h1>WhatsApp Sender</h1>
+        </v-col>
+        <v-col cols="4">
+          <v-text-field label="Server URL" outlined dense hide-details></v-text-field>
+          <p class="mt-3">Waiting for connection...</p>
+        </v-col>
+        <v-col>
+          <v-btn color="red" dark>Disconnect</v-btn>
+          <v-btn color="primary">Connect</v-btn>
+        </v-col>
+        <v-col cols="12">
+          <!-- QR Code -->
+          <v-row>
+            <v-col>
+              <v-img src="" max-width="300"></v-img>
+            </v-col>
+          </v-row>
 
+          <!-- Status Message -->
+          <v-row>
+            <v-col cols="4">
+              <div class="white ma-2">
+                <v-badge x-small class="mr-5"></v-badge>
+                <span>Status message here</span>
+              </div>
+            </v-col>
+          </v-row>
 
+          <!-- API Usage Example -->
+          <v-row>
+            <v-col>
+              <v-card>
+                <v-container class="pa-5">
+                  <h3 class="white">API Usage Example</h3>
+                  <p class="black white--text pa-2 my-3">
+                    <strong>Endpoint:</strong>
+                    <code>http://example.com/api/send-message</code>
+                  </p>
+                  <div class="black white--text pa-2">Request</div>
+                  <pre class="black white--text pa-2 mb-3">
+{
+  "clientId": "example_clientId",
+  "phone": "971xxxxxxxxx",
+  "message": "test message"
+}
+                  </pre>
+                  <div class="black white--text pa-2">Response</div>
+                  <pre class="black white--text pa-2 mb-3">
+{
+  "success": true,
+  "message": "Message sent successfully!"
+}
+                  </pre>
+                </v-container>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+    </v-container>
+  </div>
 
-      connectButton.addEventListener("click", () => {
-        const serverUrl = serverInput.value.trim();
-        if (!serverUrl) {
-          alert("Please enter a valid WebSocket server URL.");
-          return;
-        }
-        connectToWebSocket(serverUrl);
-      });
+  <script>
+    new Vue({
+      el: "#app",
+      vuetify: new Vuetify(),
+    });
+  </script>
+</body>
 
-      const connectToWebSocket = (serverUrl) => {
-        ws = new WebSocket(`${serverUrl}?clientId=${clientId}`);
-        loadingIndicator.style.display = "block";
-
-        ws.onopen = () => {
-          console.log("WebSocket connection established.");
-          ws.send(JSON.stringify({ type: "clientId", clientId }));
-        };
-
-        ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          console.log("Received message:", data);
-
-          if (data.type === "qr") {
-            qrCode.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
-              data.qr
-            )}`;
-            qrContainer.style.display = "block";
-            statusText.textContent = "Scan the QR code to connect.";
-            statusIcon.className = "red";
-            apiExample.style.display = "none";
-            loadingIndicator.style.display = "none";
-            reloadContainer.style.display = "none";
-          } else if (data.type === "status" && data.ready) {
-            statusText.textContent = "WhatsApp client is ready.";
-            statusIcon.className = "green";
-            qrContainer.style.display = "none";
-            apiExample.style.display = "block";
-            loadingIndicator.style.display = "none";
-            reloadContainer.style.display = "none";
-            const apiRequestExample = document.getElementById("apiRequestExample");
-      apiRequestExample.textContent = apiRequestExample.textContent.replace(
-        "client_XXXXXXXXX",
-        clientId
-      );
-          } else if (data.type === "error") {
-            statusText.textContent = `Error: ${data.message}`;
-            statusIcon.className = "red";
-            qrContainer.style.display = "none";
-            apiExample.style.display = "none";
-            loadingIndicator.style.display = "none";
-            reloadContainer.style.display = "block";
-          }
-        };
-
-        ws.onclose = () => {
-          console.log("WebSocket connection closed.");
-          statusText.textContent = "Connection lost. Please refresh the page.";
-          statusIcon.className = "red";
-          apiExample.style.display = "none";
-          loadingIndicator.style.display = "none";
-          reloadContainer.style.display = "block";
-        };
-      };
-
-      reloadButton.addEventListener("click", () => {
-        location.reload();
-      });
-    </script>
-  </body>
 </html>
