@@ -90,7 +90,7 @@ wss.on("connection", (ws) => {
     for (const clientId in clients) {
       if (clients[clientId].ws === ws) {
         console.log(`Client with ID ${clientId} disconnected. bescause of web socket is closed`);
-        delete clients[clientId];
+        // delete clients[clientId];
         break;
       }
     }
