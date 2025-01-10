@@ -205,7 +205,9 @@ app.post("/api/send-message", async (req, res) => {
 
 // Serve client.html
 app.get("/server", (req, res) => {
-  res.sendFile(path.join(__dirname, "server.html"));
+  // res.sendFile(path.join(__dirname, "server.html"));
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+
 });
 
 // Start the server
