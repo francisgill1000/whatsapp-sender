@@ -27,7 +27,7 @@ wss.on("connection", (ws) => {
         try {
           // Destroy the WhatsApp client instance
           await clients[clientId].whatsappClient.destroy();
-          
+
           console.log(`WhatsApp client destroyed for ID: ${clientId}`);
 
           // Send a success message back to the client
@@ -89,7 +89,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     for (const clientId in clients) {
       if (clients[clientId].ws === ws) {
-        console.log(`Client with ID ${clientId} disconnected.`);
+        console.log(`Client with ID ${clientId} disconnected. bescause of web socket is closed`);
         delete clients[clientId];
         break;
       }
@@ -158,7 +158,7 @@ async function init(ws, clientId) {
     });
 
     whatsappClient.on("disconnected", (reason) => {
-      console.log(`Client ${clientId} disconnected: ${reason}`);
+      console.log(`Whatsapp Client ${clientId} disconnected: ${reason}`);
       ws.send(
         JSON.stringify({ type: "error", message: `Disconnected: ${reason}` })
       );
