@@ -115,6 +115,8 @@ async function init(ws, clientId) {
           message: `Client is ready.`,
         })
       );
+
+      return;
     }
 
     // // Remove any leftover locks or files for the session
