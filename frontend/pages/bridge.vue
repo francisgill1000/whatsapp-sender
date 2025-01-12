@@ -104,8 +104,8 @@ export default {
       loading: false,
       ws: null, // WebSocket instance
       clientId: "",
-      // serverUrl: "wss://node.wabridge.online/ws/",
-      serverUrl: "ws://localhost:3000",
+      serverUrl: "wss://node.wabridge.online/ws/",
+      // serverUrl: "ws://localhost:3000",
       endpoint: "https://node.wabridge.online/api/send-message",
       qrCodeUrl: "",
       statusMessage: "",
@@ -197,7 +197,7 @@ export default {
           this.loading = false;
           this.statusColor = "red";
         } else if (data.type === "status" && data.ready) {
-          console.log("🚀 ~ connectToWebSocket ~ data:", data)
+          console.log("🚀 ~ connectToWebSocket ~ data:", data);
           this.statusMessage = data.message;
           this.statusColor = "success";
           this.qrCodeUrl = "";
