@@ -1,9 +1,0 @@
-LOCAL_IP=localhost
-LOCAL_PORT=3007
-BACKEND_URL=http://127.0.0.1:8000/api
-
-
-
-# server 159.65.223.236
-# user root
-# DB_PASSWORD=tZqsls7URjNC0aF
