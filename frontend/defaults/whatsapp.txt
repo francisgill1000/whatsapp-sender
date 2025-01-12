@@ -1,0 +1,7 @@
+🔔 *Notification for offline devices* 🔔\n\n 
+*Hello, {$company->name}*\n\n
+Total *({$offlineDevicesCount})* of your devices are currently offline. Please take a look and address the issue as needed to avoid any errors in report.\n\n
+Devices location: *{$msg_locations}*.\n\n
+If you have any questions or need assistance, feel free to reach out.\n\n
+Best regards\n 
+*MyTime2Cloud*
