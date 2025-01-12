@@ -1,13 +1,14 @@
 <template>
   <v-container>
     <v-row class="mb-3">
-      <v-col cols="12" v-if="qrImage">
+      <!----- <v-col cols="12" v-if="qrImage">
         <v-img :src="qrImage"></v-img>
       </v-col>
+      ----->
       <v-col cols="12">
         <h1>Whatsapp Bridge</h1>
       </v-col>
-      <v-col cols="4">
+      <!-- <v-col cols="4">
         <v-text-field
           label="Server URL"
           v-model="serverUrl"
@@ -15,7 +16,6 @@
           dense
           hide-details
         />
-        <p class="mt-3" dense flat v-if="loading">Waiting for connection...</p>
       </v-col>
       <v-col>
         <v-btn v-if="isConnected" color="red" dark @click="disconnect"
@@ -28,8 +28,11 @@
           @click="connectToWebSocket"
           >Connect</v-btn
         >
-      </v-col>
+      </v-col> -->
+
       <v-col cols="12">
+        <p class="mt-3" dense flat v-if="loading">Waiting for connection...</p>
+
         <!-- Loading Indicator -->
 
         <!-- QR Code -->
@@ -101,7 +104,8 @@ export default {
       loading: false,
       ws: null, // WebSocket instance
       clientId: "",
-      serverUrl: "wss://node.wabridge.online/ws/",
+      // serverUrl: "wss://node.wabridge.online/ws/",
+      serverUrl: "ws://localhost:3000",
       endpoint: "https://node.wabridge.online/api/send-message",
       qrCodeUrl: "",
       statusMessage: "",
@@ -109,13 +113,15 @@ export default {
       loading: false,
       isConnected: false,
 
-      qrImage:null
+      qrImage: null,
     };
   },
   async mounted() {
+    this.connectToWebSocket();
+
     const deviceId = getOrCreateDeviceId();
     this.qrImage = await generateQrCode(deviceId); // Generate and display the QR code
-    console.log("🚀 ~ mounted ~ this.qrImage:", this.qrImage)
+    console.log("🚀 ~ mounted ~ this.qrImage:", this.qrImage);
   },
   methods: {
     disconnect() {
@@ -145,11 +151,20 @@ export default {
     },
 
     connectToWebSocket() {
+      // Initialize clientId to an empty string
       this.clientId = "";
 
-      let clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
+      // Check if a clientId exists in localStorage
+      let clientId = localStorage.getItem("clientId");
 
-      localStorage.setItem("clientId", clientId);
+      if (!clientId) {
+        // If no clientId exists, generate a new one
+        clientId = `client_${Math.random().toString(36).substr(2, 9)}`;
+        localStorage.setItem("clientId", clientId);
+      }
+
+      // Assign the existing or newly generated clientId
+      this.clientId = clientId;
 
       if (!this.serverUrl.trim()) {
         alert("Please enter a valid WebSocket server URL.");
@@ -166,7 +181,6 @@ export default {
 
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log("🚀 ~ connectToWebSocket ~ data:", data);
 
         if (data.type === "qr") {
           this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
@@ -183,7 +197,8 @@ export default {
           this.loading = false;
           this.statusColor = "red";
         } else if (data.type === "status" && data.ready) {
-          this.statusMessage = "WhatsApp client is ready.";
+          console.log("🚀 ~ connectToWebSocket ~ data:", data)
+          this.statusMessage = data.message;
           this.statusColor = "success";
           this.qrCodeUrl = "";
           this.loading = false;
