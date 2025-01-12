@@ -99,6 +99,8 @@ import { getOrCreateDeviceId } from "~/utils/deviceId";
 import { generateQrCode } from "~/utils/qrcodeGenerator";
 
 export default {
+  auth: false,
+  layout: "guest",
   data() {
     return {
       loading: false,
