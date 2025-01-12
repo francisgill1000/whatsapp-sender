@@ -107,17 +107,15 @@ server.listen(3000, () => {
 async function init(ws, clientId) {
   try {
     // Check if a client already exists for the clientId
-    // if (clients[clientId] && clients[clientId].whatsappClient) {
-    //   console.log(`Disconnecting existing client ${clientId}...`);
-    //   try {
-    //     await clients[clientId].whatsappClient.destroy();
-    //   } catch (error) {
-    //     console.error(
-    //       `Error during client destruction for ${clientId}:`,
-    //       error.message
-    //     );
-    //   }
-    // }
+    if (clients[clientId] && clients[clientId].whatsappClient) {
+      ws.send(
+        JSON.stringify({
+          type: "status",
+          ready: true,
+          message: `Client is ready.`,
+        })
+      );
+    }
 
     // // Remove any leftover locks or files for the session
     // const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
