@@ -1,0 +1,1 @@
+__NUXT_JSONP__("/login", (function(a){return {data:[{}],fetch:{},mutations:[["dashboard\u002FRESET_STATE",a],["RESET_STATE",a]]}}(void 0)));
