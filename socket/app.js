@@ -19,71 +19,8 @@ let clients = {}; // Store clients by client id
 wss.on("connection", (ws) => {
   ws.on("message", async (message) => {
     const data = JSON.parse(message);
-
-    if (data.type === "disconnect") {
-      const clientId = data.clientId;
-
-      if (clients[clientId]) {
-        try {
-          // Destroy the WhatsApp client instance
-          await clients[clientId].whatsappClient.destroy();
-
-          console.log(`WhatsApp client destroyed for ID: ${clientId}`);
-
-          // Send a success message back to the client
-          ws.send(
-            JSON.stringify({
-              type: "status",
-              ready: false,
-              message: `WhatsApp client with ID ${clientId} has been disconnected.`,
-            })
-          );
-        } catch (error) {
-          console.error(
-            `Error destroying WhatsApp client for ${clientId}:`,
-            error.message
-          );
-
-          // Send an error message back to the client
-          ws.send(
-            JSON.stringify({
-              type: "status",
-              ready: false,
-              message: `Error disconnecting WhatsApp client for ID ${clientId}: ${error.message}`,
-            })
-          );
-        }
-      } else {
-        console.warn(`Client ID ${clientId} not found.`);
-        ws.send(
-          JSON.stringify({
-            type: "status",
-            ready: false,
-            message: `Client ID ${clientId} not found.`,
-          })
-        );
-      }
-    }
-
     if (data.type === "clientId") {
-      const clientId = data.clientId;
-      console.log(`Client connected with ID: ${clientId}`);
-
-      // Store WebSocket connection and initialize WhatsApp client
-      await init(ws, clientId);
-      clients[clientId] = { ws, ...clients[clientId] };
-      // if (!clients[clientId].whatsappClient) {
-      //   await init(ws, clientId);
-      // } else {
-      //   console.log(`Client ${clientId} already initialized.`);
-      //   ws.send(
-      //     JSON.stringify({
-      //       type: "status",
-      //       ready: true,
-      //       message: `Client ${clientId} already initialized.`,
-      //     })
-      //   );
-      // }
+      await init(ws, data.clientId);
     }
   });
 
@@ -100,26 +37,20 @@ wss.on("connection", (ws) => {
   });
 });
 
-server.listen(3000, () => {
-  console.log("WebSocket server running on ws://localhost:3000");
+server.listen(5175, () => {
+  console.log("WebSocket server running on ws://localhost:5175");
 });
 
 async function init(ws, clientId) {
+  ws.send(
+    JSON.stringify({
+      type: "status",
+      ready: true,
+      message: `Connecting to whatsapp...`,
+      source: "socket",
+    })
+  );
   try {
-    // Check if a client already exists for the clientId
-    if (clients[clientId] && clients[clientId].whatsappClient) {
-      ws.send(
-        JSON.stringify({
-          type: "status",
-          ready: true,
-          message: `Client is ready.`,
-        })
-      );
-
-      return;
-    }
-
-    // // Remove any leftover locks or files for the session
     // const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
     // if (fs.existsSync(sessionDir)) {
     //   fs.rmSync(sessionDir, { recursive: true, force: true });
@@ -129,6 +60,7 @@ async function init(ws, clientId) {
     const whatsappClient = new Client({
       authStrategy: new LocalAuth({ clientId }),
       puppeteer: {
+        headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox"],
         executablePath: "/snap/bin/chromium", // Replace with your Chromium path
       },
@@ -140,13 +72,13 @@ async function init(ws, clientId) {
     });
 
     whatsappClient.on("ready", () => {
-      console.log(`Client ${clientId} is ready.`);
       clients[clientId].isClientReady = true;
       ws.send(
         JSON.stringify({
           type: "status",
           ready: true,
           message: `Client is ready.`,
+          source: "whatsapp",
         })
       );
     });
@@ -166,17 +98,33 @@ async function init(ws, clientId) {
         JSON.stringify({ type: "error", message: `Disconnected: ${reason}` })
       );
       delete clients[clientId];
+
+      // const sessionDir = path.join(".wwebjs_auth", `session-${clientId}`);
+      // if (fs.existsSync(sessionDir)) {
+      //   fs.rmSync(sessionDir, { recursive: true, force: true });
+      //   console.log(`Cleaned up session directory for client ${clientId}`);
+      // }
     });
 
     // Save the client
     clients[clientId] = { whatsappClient, ws, isClientReady: false };
+    // console.log("🚀 ~ whatsappClient.on ~ clients[clientId]:", clients[clientId])
     await whatsappClient.initialize();
   } catch (error) {
-    console.error(`Error initializing client ${clientId}:`, error);
+    // Restart the PM2 process and reinitialize
+
+    const pm2ProcessId = 13; // Replace with your PM2 process ID
+
+    const { exec } = require("child_process");
+
+    exec(`pm2 reload ${pm2ProcessId}`, async (err, stdout, stderr) => {});
+
     ws.send(
       JSON.stringify({
-        type: "error",
-        message: `Initialization error: ${error.message}`,
+        type: "clientId",
+        ready: true,
+        message: `Refresh or reload the page after 10 seconds`,
+        source: "socket",
       })
     );
   }
@@ -189,7 +137,7 @@ app.post("/api/send-message", async (req, res) => {
   if (!clients[clientId] || !clients[clientId].isClientReady) {
     return res
       .status(400)
-      .json({ success: false, message: "WhatsApp client is not ready." });
+      .json({ success: false, message: "WhatsApp client is expired." });
   }
 
   try {
@@ -208,14 +156,12 @@ app.post("/api/send-message", async (req, res) => {
 
 // Serve client.html
 app.get("/server", (req, res) => {
-  // this is nuxt build but i want to use different page (bridge.vue) location nuxt_app_root/pages/bridge.vue
-
   // after build how to use
-  res.sendFile(path.join(__dirname, "dist", "bridge", "index.html"));
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 // Start the server
-const port = 3001;
+const port = 5176;
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
