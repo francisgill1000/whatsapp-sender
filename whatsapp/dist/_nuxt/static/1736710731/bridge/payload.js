@@ -1,1 +1,0 @@
-__NUXT_JSONP__("/bridge", {data:[{}],fetch:{},mutations:[]});

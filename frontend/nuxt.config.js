@@ -65,16 +65,6 @@ export default {
   // Global CSS: https://go.nuxtjs.dev/config-css
   // css: ["~/assets/styles"],
 
-  // Plugins to run before rendering page: https://go.nuxtjs.dev/config-plugins
-  plugins: [
-    "~/plugins/qrcode.js",
-    "~/plugins/custom-methods.js",
-    { src: "~/plugins/crypto.js", mode: "client" },
-    { src: "~/plugins/axios.js" },
-    // { src: "~/plugins/TiptapVuetify", mode: "client" },
-    { src: "~/plugins/vue-apexchart.js", ssr: false },
-    { src: "~/plugins/vue-signature-pad.js", mode: "client" },
-  ],
 
   // Auto import components: https://go.nuxtjs.dev/config-components
   components: true,
@@ -194,7 +184,7 @@ export default {
   },
 
   serverMiddleware: [
-    { path: "/api/generate-page", handler: "~/server/api/generatePage.js" },
+    // { path: "/api/generate-page", handler: "~/server/api/generatePage.js" },
   ],
 
   // env: {

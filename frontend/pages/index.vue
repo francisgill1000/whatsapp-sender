@@ -1,14 +1,15 @@
 <template>
-  <v-container>
-    <v-row class="mb-3">
-      <!----- <v-col cols="12" v-if="qrImage">
+  <v-app>
+    <v-container>
+      <v-row class="mb-3">
+        <!----- <v-col cols="12" v-if="qrImage">
         <v-img :src="qrImage"></v-img>
       </v-col>
       ----->
-      <v-col cols="12">
-        <h1>Whatsapp Bridge</h1>
-      </v-col>
-      <!-- <v-col cols="4">
+        <v-col cols="12">
+          <h1>Whatsapp Bridge</h1>
+        </v-col>
+        <!-- <v-col cols="4">
         <v-text-field
           label="Server URL"
           v-model="serverUrl"
@@ -30,85 +31,90 @@
         >
       </v-col> -->
 
-      <v-col cols="12">
-        <p class="mt-3" dense flat v-if="loading">Waiting for connection...</p>
+        <v-col cols="12">
+          <p class="mt-3" dense flat v-if="loading">
+            Waiting for connection...
+          </p>
 
-        <!-- Loading Indicator -->
+          <!-- Loading Indicator -->
 
-        <!-- QR Code -->
-        <v-row v-if="qrCodeUrl" class="">
-          <v-col>
-            <v-img :src="qrCodeUrl" max-width="300" />
-          </v-col>
-        </v-row>
+          <!-- QR Code -->
+          <v-row v-if="qrCodeUrl" class="">
+            <v-col>
+              <v-img :src="qrCodeUrl" max-width="300" />
+            </v-col>
+          </v-row>
 
-        <!-- Status Message -->
-        <v-row v-if="statusMessage" class="">
-          <v-col cols="4">
-            <div class="white ma-2" dense>
-              <v-badge
-                x-small
-                dense
-                hide-details
-                :color="statusColor"
-                class="mr-5"
-              ></v-badge>
-              <span>{{ statusMessage }}</span>
-            </div>
-          </v-col>
-        </v-row>
+          <!-- Status Message -->
+          <v-row v-if="statusMessage" class="">
+            <v-col cols="4">
+              <div class="white ma-2" dense>
+                <v-badge
+                  x-small
+                  dense
+                  hide-details
+                  :color="statusColor"
+                  class="mr-5"
+                ></v-badge>
+                <span>{{ statusMessage }}</span>
+              </div>
+            </v-col>
+          </v-row>
 
-        <!-- API Usage Example -->
-        <v-row>
-          <v-col>
-            <v-card>
-              <v-container class="pa-5">
-                <h3 class="white">API Usage Example</h3>
-                <p class="black white--text pa-2 my-3">
-                  <strong>Endpoint:</strong>
-                  <code> {{ endpoint }}</code>
-                </p>
-                <div class="black white--text pa-2">Request</div>
-                <pre class="black white--text pa-2 mb-3">
+          <!-- API Usage Example -->
+          <v-row>
+            <v-col>
+              <v-card>
+                <v-container class="pa-5">
+                  <h3 class="white">API Usage Example</h3>
+                  <p class="black white--text pa-2 my-3">
+                    <strong>Endpoint:</strong>
+                    <code> {{ endpoint }}</code>
+                  </p>
+                  <div class="black white--text pa-2">Request</div>
+                  <pre class="black white--text pa-2 mb-3">
 {
   "clientId": "{{ clientId }}",
   "phone": "971xxxxxxxxx",
   "message": "test message"
 }
 </pre
-                >
-                <div class="black white--text pa-2">Request</div>
-                <pre class="black white--text pa-2 mb-3">
+                  >
+                  <div class="black white--text pa-2">Request</div>
+                  <pre class="black white--text pa-2 mb-3">
 {
   "success": true,
   "message": "Message sent successfully!"
 }
 </pre
-                >
-              </v-container>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-col>
-    </v-row>
-  </v-container>
+                  >
+                </v-container>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+    </v-container>
+  </v-app>
 </template>
 
 <script>
-import { getOrCreateDeviceId } from "~/utils/deviceId";
-import { generateQrCode } from "~/utils/qrcodeGenerator";
+// import { getOrCreateDeviceId } from "~/utils/deviceId";
+// import { generateQrCode } from "~/utils/qrcodeGenerator";
 
 export default {
   auth: false,
-  layout: "default",
   data() {
     return {
       loading: false,
       ws: null, // WebSocket instance
       clientId: "",
-      serverUrl: "wss://node.wabridge.online/ws/",
-      // serverUrl: "ws://localhost:3000",
+      // serverUrl: "wss://node.wabridge.online/ws/",
       endpoint: "https://node.wabridge.online/api/send-message",
+
+      serverUrl: "ws://localhost:5175",
+      endpoint: "http://localhost:5176/api/send-message",
+
       qrCodeUrl: "",
       statusMessage: "",
       statusColor: "",
@@ -121,9 +127,9 @@ export default {
   async mounted() {
     this.connectToWebSocket();
 
-    const deviceId = getOrCreateDeviceId();
-    this.qrImage = await generateQrCode(deviceId); // Generate and display the QR code
-    console.log("🚀 ~ mounted ~ this.qrImage:", this.qrImage);
+    // const deviceId = getOrCreateDeviceId();
+    // this.qrImage = await generateQrCode(deviceId); // Generate and display the QR code
+    // console.log("🚀 ~ mounted ~ this.qrImage:", this.qrImage);
   },
   methods: {
     disconnect() {
@@ -184,7 +190,12 @@ export default {
       this.ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
 
-        if (data.type === "qr") {
+        if (data.qr == undefined) {
+          this.qrCodeUrl = null;
+          this.statusMessage = "";
+          this.loading = false;
+          this.statusColor = "";
+        } else if (data.type === "qr") {
           this.qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
             data.qr
           )}`;

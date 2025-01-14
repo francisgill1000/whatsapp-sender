@@ -154,10 +154,9 @@ app.post("/api/send-message", async (req, res) => {
   }
 });
 
-// Serve client.html
-app.get("/server", (req, res) => {
-  // after build how to use
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
+app.get("/init", (req, res) => {
+  const filePath = path.join(__dirname, "..", "frontend", "dist", "index.html");
+  res.sendFile(filePath);
 });
 
 // Start the server
